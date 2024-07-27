@@ -44,6 +44,7 @@ public class Shows {
 	private String lead_actors;
 	private String director;
 	private double rating;
+	@JsonIgnoreProperties("shows")
 	@OneToMany(mappedBy = "show")
 	@JsonIgnore
 	private Set<Ticket> tickets;

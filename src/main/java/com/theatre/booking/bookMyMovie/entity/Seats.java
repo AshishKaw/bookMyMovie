@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -26,6 +27,7 @@ public class Seats {
 	private Screen screen;
 	private String seat_category;
 	private int addon_price;
+	@JsonIgnoreProperties("seat")
 	@OneToOne(mappedBy = "seat")
 	private Ticket ticket;
 	

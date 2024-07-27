@@ -5,6 +5,8 @@ import java.util.Set;
 
 import org.hibernate.annotations.UpdateTimestamp;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
@@ -27,7 +29,9 @@ public class Customer {
 	@UpdateTimestamp
 	private LocalDateTime last_updated;
 	@OneToMany(mappedBy = "customer")
+	@JsonIgnoreProperties("customer")
 	private Set<Bookings> bookings;
+	
 	
 	
 	public int getCustomer_id() {

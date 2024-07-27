@@ -41,10 +41,12 @@ public class Screen {
 	private LocalDateTime last_updated;
 	
 	@JsonIgnoreProperties("screen")
-	@OneToMany(mappedBy = "screen", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+	@OneToMany(mappedBy = "screen")
+	@JsonIgnore
 	private Set<Shows> shows;
 	
-	@OneToMany(mappedBy = "screen", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+	@JsonIgnoreProperties("screen")
+	@OneToMany(mappedBy = "screen")
 	private Set<Seats> seats;
 	
 	public Set<Shows> getShows() {

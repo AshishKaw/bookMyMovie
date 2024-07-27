@@ -23,11 +23,11 @@ public class Ticket {
 	private int ticket_id;
 	@ManyToOne
 	@JoinColumn(name = "show_id")
-	@JsonIgnore
+	@JsonIgnoreProperties("ticket")
 	private Shows show;
 	@OneToOne
 	@JoinColumn(name = "seat_id")
-	@JsonIgnore
+	@JsonIgnoreProperties("ticket")
 	private Seats seat;
 	private int price;
 	@CreationTimestamp
@@ -57,7 +57,7 @@ public class Ticket {
 		this.seat = seat;
 	}
 	public int getPrice() {
-		return (this.show.getPrice() + this.seat.getAddon_price());
+		return price;
 	}
 	public void setPrice(int price) {
 		this.price = price;
@@ -67,6 +67,12 @@ public class Ticket {
 	}
 	public void setGenerated_on(LocalDateTime generated_on) {
 		this.generated_on = generated_on;
+	}
+	public Bookings getBooking() {
+		return booking;
+	}
+	public void setBooking(Bookings booking) {
+		this.booking = booking;
 	}
 	
 	

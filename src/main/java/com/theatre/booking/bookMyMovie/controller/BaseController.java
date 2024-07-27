@@ -6,12 +6,18 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.List;
+import java.util.Optional;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.DoubleAccumulator;
+
+import javax.print.attribute.standard.Media;
 
 import org.hibernate.boot.model.internal.CollectionSecondPass;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -42,6 +48,7 @@ import com.theatre.booking.bookMyMovie.repo.Ticket_Repo;
 import com.theatre.booking.bookMyMovie.util.FilterSepcification;
 
 import jakarta.annotation.PostConstruct;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/booking/api/v1")
@@ -240,6 +247,13 @@ public class BaseController {
 
 		return theatre_repo.findAll();
 	}
+	
+	@GetMapping("/discounts")
+	@ResponseBody
+	Iterable<Discounts> getDiscounts() {
+
+		return discount_repo.findAll();
+	}
 
 	@GetMapping("/screens")
 	@ResponseBody
@@ -254,10 +268,36 @@ public class BaseController {
 
 		return customer_repo.findAll();
 	}
-
-	@GetMapping("/search")
+	
+	
+	@GetMapping("/ticket/{ticket_id}")
 	@ResponseBody
-	Iterable<Shows> findShows(@RequestBody FilterCriteria filtercriteria) {
+	Ticket getTicketById(@PathVariable Integer ticket_id) {
+		Optional<Ticket> ticket_o = ticket_repo.findById(ticket_id);
+		Ticket ticket = null;
+		if(ticket_o.isPresent()){
+			ticket = ticket_o.get();
+			ticket.getShow().getScreen().setSeats(null);
+		}
+		return ticket;
+	}
+	
+	@GetMapping("/bookings/{booking_id}")
+	@ResponseBody
+	Bookings getBookingById(@PathVariable Integer booking_id) {
+		Optional<Bookings> booking_o = booking_repo.findById(booking_id);
+		Bookings booking = null;
+		if(booking_o.isPresent()){
+			booking = booking_o.get();
+			booking.getCustomer().setBookings(null);
+			booking.getTickets().forEach(e->{e.setShow(null);});
+		}
+		return booking;
+	}
+
+	@GetMapping(value="/search")
+	@ResponseBody
+	Iterable<Shows> findShows(@Valid FilterCriteria filtercriteria) {
 
 		return show_repo.findAll(new FilterSepcification(filtercriteria));
 	}
@@ -277,6 +317,7 @@ public class BaseController {
 				Ticket ticket = new Ticket();
 				ticket.setSeat(seat);
 				ticket.setShow(bookingRequest.getShow());
+				ticket.setPrice(bookingRequest.getShow().getPrice()+seat.getAddon_price());
 				totalPrice.addAndGet(ticket.getPrice());
 				ticket_repo.save(ticket);
 				total_tickets.add(ticket);
@@ -288,17 +329,19 @@ public class BaseController {
 				List<Discounts> discountArraytList = new ArrayList<>();
 				discountArraytList.addAll(discountlist);
 				
-				Discounts discount = discountArraytList.get(0);
+				Discounts discount = discountArraytList.get(0); // can be done Sorting it in desc in to get max discount at top
 				if (discount.getDiscount_type()!=null && discount.getDiscount_type().equals("PERIOD")
 						&& bookingRequest.getShow().getShow_period().equalsIgnoreCase(discount.getPeriod())) {
-					int discount_ammount = (discount.getDiscount() / 100) * totalPrice.get();
-					booking.setTotal_price(totalPrice.get() - discount_ammount);
-					booking.setTotal_discount(discount_ammount);
+					int dicount_limit = discount.getDiscount();
+					double total_discount = ((double) dicount_limit / 100) * (double)totalPrice.get(); 
+					booking.setTotal_price(totalPrice.get() - (int)total_discount);
+					booking.setTotal_discount((int)total_discount);
 					booking.setDiscounts(discount);
 				}else if (discount.getDiscount_type()!=null && discount.getDiscount_type().equals("BONUS") && bookingRequest.getSeats().size() > 2) {
-					int discount_ammount = (discount.getDiscount() / 100) * totalPrice.get();
-					booking.setTotal_price(totalPrice.get() - discount_ammount);
-					booking.setTotal_discount(discount_ammount);
+					int dicount_limit = discount.getDiscount();
+					double total_discount = ((double) dicount_limit / 100) * (double)totalPrice.get(); 
+					booking.setTotal_price(totalPrice.get() - (int)total_discount);
+					booking.setTotal_discount((int)total_discount);
 					booking.setDiscounts(discount);
 				}else {
 					booking.setTotal_price(totalPrice.get());
@@ -313,9 +356,15 @@ public class BaseController {
 			booking.setPayment_status("SUCCESS");
 			booking.setBooking_status("Confirmed");
 			booking_repo.save(booking);
+			booking.getCustomer().setBookings(null);
+			booking.getTickets().forEach(e->{
+				e.setBooking(booking);
+				ticket_repo.save(e);
+			  });
 			return booking;
 		} else {
 			throw new RuntimeException("Invalid Booking Request");
 		}
 	}
+
 }
